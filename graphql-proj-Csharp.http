@@ -1,7 +1,61 @@
 @graphql_proj_Csharp_HostAddress = http://localhost:5000
+@accessToken = paste-access-token-here
+@refreshToken = paste-refresh-token-here
 
 GET {{graphql_proj_Csharp_HostAddress}}/api/health
 Accept: application/json
+
+###
+
+POST {{graphql_proj_Csharp_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "Admin123!"
+}
+
+###
+
+POST {{graphql_proj_Csharp_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "New Customer",
+  "email": "new.customer@example.com",
+  "password": "Customer123!"
+}
+
+###
+
+GET {{graphql_proj_Csharp_HostAddress}}/api/auth/me
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+###
+
+GET {{graphql_proj_Csharp_HostAddress}}/api/auth/admin-check
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+###
+
+POST {{graphql_proj_Csharp_HostAddress}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+###
+
+POST {{graphql_proj_Csharp_HostAddress}}/api/auth/revoke
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
 
 ###
 
@@ -49,6 +103,7 @@ Accept: application/json
 ###
 
 PATCH {{graphql_proj_Csharp_HostAddress}}/api/controllers/books/1/stock
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {

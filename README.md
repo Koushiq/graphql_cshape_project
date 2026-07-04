@@ -1,8 +1,17 @@
 # GraphQL C# Bookstore API
 
-ASP.NET Core 9 GraphQL API using Hot Chocolate, EF Core, PostgreSQL, and seed data.
+ASP.NET Core 10 GraphQL API using Hot Chocolate, EF Core, PostgreSQL, Identity, JWT bearer authentication, refresh tokens, role-based authorization, and seed data.
+
+Public API surfaces depend on services or GraphQL repositories instead of using `AppDbContext` directly. EF Core access is isolated in the `Repositories/` layer and registered through dependency injection.
 
 ## Run locally
+
+Prerequisites:
+
+```text
+.NET SDK 10
+Docker Desktop or PostgreSQL 16+
+```
 
 1. Start the full stack:
 
@@ -27,16 +36,50 @@ To run only the API from .NET:
    dotnet run
    ```
 
+Check the installed SDK:
+
+```bash
+dotnet --version
+```
+
+The project targets:
+
+```text
+net10.0
+```
+
 In development, migrations are applied on startup and the seed data from `Data/SeedData.cs` is inserted through EF migrations. If you prefer applying migrations manually:
 
    ```bash
    dotnet ef database update
    ```
 
+Default local admin seeded at startup:
+
+```text
+Email:    admin@example.com
+Password: Admin123!
+Role:     Admin
+```
+
+Change these values in `appsettings.Development.json` before using this beyond local development.
+
 GraphQL Banana Cake Pop IDE:
 
 ```text
 http://localhost:5000/graphql
+```
+
+Swagger UI:
+
+```text
+http://localhost:5000/swagger
+```
+
+Use `POST /api/auth/login`, copy the returned access token, click **Authorize** in Swagger, and paste:
+
+```text
+Bearer <access-token>
 ```
 
 Health endpoint:
@@ -74,6 +117,43 @@ GET   /api/controllers/orders?page=1&pageSize=10
 POST  /api/controllers/orders
 POST  /api/controllers/reviews
 ```
+
+Auth endpoints:
+
+```text
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/revoke
+GET  /api/auth/me
+GET  /api/auth/admin-check
+```
+
+JWT/role protection:
+
+```text
+PATCH /api/controllers/books/{id}/stock  requires Admin or Manager
+POST  /api/controllers/orders            requires any authenticated user
+POST  /api/controllers/reviews           requires any authenticated user
+GET   /api/controllers/customers         requires Admin
+GET   /api/auth/admin-check              requires Admin
+```
+
+Login response returns an access token and refresh token. Use the access token as:
+
+```text
+Authorization: Bearer <access-token>
+```
+
+Refresh token flow:
+
+```json
+{
+  "refreshToken": "<refresh-token>"
+}
+```
+
+The refresh endpoint rotates refresh tokens: the old token is revoked and replaced by a new one.
 
 ## Example queries
 

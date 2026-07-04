@@ -1,12 +1,11 @@
-using graphql_proj_Csharp.Data;
 using graphql_proj_Csharp.Models;
-using Microsoft.EntityFrameworkCore;
+using graphql_proj_Csharp.Repositories;
 
 namespace graphql_proj_Csharp.GraphQL;
 
-public sealed class Mutation
+public sealed class Mutation(IGraphQLMutationRepository mutationRepository)
 {
-    public async Task<Author> AddAuthor(AddAuthorInput input, AppDbContext dbContext)
+    public Task<Author> AddAuthor(AddAuthorInput input)
     {
         var author = new Author
         {
@@ -15,13 +14,10 @@ public sealed class Mutation
             DateOfBirth = input.DateOfBirth
         };
 
-        dbContext.Authors.Add(author);
-        await dbContext.SaveChangesAsync();
-
-        return author;
+        return mutationRepository.AddAuthorAsync(author);
     }
 
-    public async Task<Category> AddCategory(AddCategoryInput input, AppDbContext dbContext)
+    public Task<Category> AddCategory(AddCategoryInput input)
     {
         var category = new Category
         {
@@ -29,21 +25,15 @@ public sealed class Mutation
             Description = input.Description?.Trim()
         };
 
-        dbContext.Categories.Add(category);
-        await dbContext.SaveChangesAsync();
-
-        return category;
+        return mutationRepository.AddCategoryAsync(category);
     }
 
-    public async Task<Book> AddBook(AddBookInput input, AppDbContext dbContext)
+    public async Task<Book> AddBook(AddBookInput input)
     {
-        await EnsureAuthorExists(input.AuthorId, dbContext);
-        await EnsurePublisherExists(input.PublisherId, dbContext);
+        await EnsureAuthorExists(input.AuthorId);
+        await EnsurePublisherExists(input.PublisherId);
 
-        var categories = await dbContext.Categories
-            .Where(category => input.CategoryIds.Contains(category.Id))
-            .Select(category => category.Id)
-            .ToListAsync();
+        var categories = await mutationRepository.GetExistingCategoryIdsAsync(input.CategoryIds);
 
         if (categories.Count != input.CategoryIds.Distinct().Count())
         {
@@ -65,19 +55,12 @@ public sealed class Mutation
                 .ToList()
         };
 
-        dbContext.Books.Add(book);
-        await dbContext.SaveChangesAsync();
-
-        return await dbContext.Books
-            .Include(savedBook => savedBook.Author)
-            .Include(savedBook => savedBook.Publisher)
-            .Include(savedBook => savedBook.BookCategories).ThenInclude(bookCategory => bookCategory.Category)
-            .FirstAsync(savedBook => savedBook.Id == book.Id);
+        return await mutationRepository.AddBookAsync(book);
     }
 
-    public async Task<Book> UpdateBookStock(UpdateBookStockInput input, AppDbContext dbContext)
+    public async Task<Book> UpdateBookStock(UpdateBookStockInput input)
     {
-        var book = await dbContext.Books.FirstOrDefaultAsync(book => book.Id == input.BookId);
+        var book = await mutationRepository.GetBookForStockUpdateAsync(input.BookId);
 
         if (book is null)
         {
@@ -85,20 +68,20 @@ public sealed class Mutation
         }
 
         book.Stock = input.Stock;
-        await dbContext.SaveChangesAsync();
+        await mutationRepository.SaveChangesAsync();
 
         return book;
     }
 
-    public async Task<Review> AddReview(AddReviewInput input, AppDbContext dbContext)
+    public async Task<Review> AddReview(AddReviewInput input)
     {
         if (input.Rating is < 1 or > 5)
         {
             throw new GraphQLException("Rating must be between 1 and 5.");
         }
 
-        await EnsureBookExists(input.BookId, dbContext);
-        await EnsureCustomerExists(input.CustomerId, dbContext);
+        await EnsureBookExists(input.BookId);
+        await EnsureCustomerExists(input.CustomerId);
 
         var review = new Review
         {
@@ -109,15 +92,15 @@ public sealed class Mutation
             CreatedAtUtc = DateTime.UtcNow
         };
 
-        dbContext.Reviews.Add(review);
-        await dbContext.SaveChangesAsync();
+        mutationRepository.AddReview(review);
+        await mutationRepository.SaveChangesAsync();
 
         return review;
     }
 
-    public async Task<Order> PlaceOrder(PlaceOrderInput input, AppDbContext dbContext)
+    public async Task<Order> PlaceOrder(PlaceOrderInput input)
     {
-        await EnsureCustomerExists(input.CustomerId, dbContext);
+        await EnsureCustomerExists(input.CustomerId);
 
         if (input.Items.Count == 0)
         {
@@ -125,9 +108,7 @@ public sealed class Mutation
         }
 
         var requestedBookIds = input.Items.Select(item => item.BookId).Distinct().ToArray();
-        var books = await dbContext.Books
-            .Where(book => requestedBookIds.Contains(book.Id))
-            .ToDictionaryAsync(book => book.Id);
+        var books = await mutationRepository.GetBooksForOrderAsync(requestedBookIds);
 
         if (books.Count != requestedBookIds.Length)
         {
@@ -168,42 +149,36 @@ public sealed class Mutation
                 .ToList()
         };
 
-        dbContext.Orders.Add(order);
-        await dbContext.SaveChangesAsync();
-
-        return await dbContext.Orders
-            .Include(savedOrder => savedOrder.Customer)
-            .Include(savedOrder => savedOrder.Items).ThenInclude(item => item.Book)
-            .FirstAsync(savedOrder => savedOrder.Id == order.Id);
+        return await mutationRepository.AddOrderAsync(order);
     }
 
-    private static async Task EnsureAuthorExists(int authorId, AppDbContext dbContext)
+    private async Task EnsureAuthorExists(int authorId)
     {
-        if (!await dbContext.Authors.AnyAsync(author => author.Id == authorId))
+        if (!await mutationRepository.AuthorExistsAsync(authorId))
         {
             throw new GraphQLException("Author not found.");
         }
     }
 
-    private static async Task EnsurePublisherExists(int publisherId, AppDbContext dbContext)
+    private async Task EnsurePublisherExists(int publisherId)
     {
-        if (!await dbContext.Publishers.AnyAsync(publisher => publisher.Id == publisherId))
+        if (!await mutationRepository.PublisherExistsAsync(publisherId))
         {
             throw new GraphQLException("Publisher not found.");
         }
     }
 
-    private static async Task EnsureBookExists(int bookId, AppDbContext dbContext)
+    private async Task EnsureBookExists(int bookId)
     {
-        if (!await dbContext.Books.AnyAsync(book => book.Id == bookId))
+        if (!await mutationRepository.BookExistsAsync(bookId))
         {
             throw new GraphQLException("Book not found.");
         }
     }
 
-    private static async Task EnsureCustomerExists(int customerId, AppDbContext dbContext)
+    private async Task EnsureCustomerExists(int customerId)
     {
-        if (!await dbContext.Customers.AnyAsync(customer => customer.Id == customerId))
+        if (!await mutationRepository.CustomerExistsAsync(customerId))
         {
             throw new GraphQLException("Customer not found.");
         }

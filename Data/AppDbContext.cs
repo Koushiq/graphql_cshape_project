@@ -1,9 +1,10 @@
 using graphql_proj_Csharp.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace graphql_proj_Csharp.Data;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Author> Authors => Set<Author>();
     public DbSet<Book> Books => Set<Book>();
@@ -13,10 +14,29 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<Publisher> Publishers => Set<Publisher>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<ApplicationUser>(entity =>
+        {
+            entity.Property(user => user.FullName).HasMaxLength(160).IsRequired();
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.Property(refreshToken => refreshToken.TokenHash).HasMaxLength(128).IsRequired();
+            entity.Property(refreshToken => refreshToken.ReplacedByTokenHash).HasMaxLength(128);
+            entity.HasIndex(refreshToken => refreshToken.TokenHash).IsUnique();
+            entity.HasOne(refreshToken => refreshToken.User)
+                .WithMany(user => user.RefreshTokens)
+                .HasForeignKey(refreshToken => refreshToken.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<Author>(entity =>
         {
             entity.Property(author => author.Name).HasMaxLength(160).IsRequired();

@@ -1,7 +1,5 @@
-using graphql_proj_Csharp.Data;
 using graphql_proj_Csharp.Contracts;
-using graphql_proj_Csharp.Models;
-using Microsoft.EntityFrameworkCore;
+using graphql_proj_Csharp.Services;
 
 namespace graphql_proj_Csharp;
 
@@ -21,56 +19,34 @@ public static class ApiEndpoints
             applyMigrationsOnStartup = configuration.GetValue("Database:ApplyMigrationsOnStartup", false)
         }));
 
-        api.MapGet("/books", async (AppDbContext dbContext, int page = Pagination.DefaultPage, int pageSize = Pagination.DefaultPageSize) =>
-            await dbContext.Books
-                .Include(book => book.Author)
-                .Include(book => book.Publisher)
-                .OrderBy(book => book.Title)
-                .Select(book => new BookSummaryResponse(
-                    book.Id,
-                    book.Title,
-                    book.Isbn,
-                    book.Price,
-                    book.Stock,
-                    book.Author == null ? string.Empty : book.Author.Name,
-                    book.Publisher == null ? string.Empty : book.Publisher.Name))
-                .ToPagedResponseAsync(page, pageSize));
+        api.MapGet("/books", async (IBookService bookService, int page = Pagination.DefaultPage, int pageSize = Pagination.DefaultPageSize) =>
+            await bookService.GetBooksAsync(page, pageSize));
 
-        api.MapGet("/books/{id:int}", async (int id, AppDbContext dbContext) =>
+        api.MapGet("/books/{id:int}", async (int id, IBookService bookService) =>
         {
-            var book = await dbContext.Books
-                .Include(book => book.Author)
-                .Include(book => book.Publisher)
-                .Include(book => book.BookCategories).ThenInclude(bookCategory => bookCategory.Category)
-                .Include(book => book.Reviews)
-                .FirstOrDefaultAsync(book => book.Id == id);
+            var book = await bookService.GetBookByIdAsync(id);
 
             return book is null ? Results.NotFound() : Results.Ok(book);
         });
 
-        api.MapGet("/authors", async (AppDbContext dbContext, int page = Pagination.DefaultPage, int pageSize = Pagination.DefaultPageSize) =>
-            await dbContext.Authors
-                .Include(author => author.Books)
-                .OrderBy(author => author.Name)
-                .ToPagedResponseAsync(page, pageSize));
+        api.MapGet("/authors", async (IAuthorService authorService, int page = Pagination.DefaultPage, int pageSize = Pagination.DefaultPageSize) =>
+            await authorService.GetAuthorsAsync(page, pageSize));
 
-        api.MapGet("/categories", async (AppDbContext dbContext, int page = Pagination.DefaultPage, int pageSize = Pagination.DefaultPageSize) =>
-            await dbContext.Categories
-                .OrderBy(category => category.Name)
-                .ToPagedResponseAsync(page, pageSize));
+        api.MapGet("/categories", async (ICategoryService categoryService, int page = Pagination.DefaultPage, int pageSize = Pagination.DefaultPageSize) =>
+            await categoryService.GetCategoriesAsync(page, pageSize));
 
-        api.MapPost("/customers", async (CreateCustomerRequest request, AppDbContext dbContext) =>
+        api.MapPost("/customers", async (CreateCustomerRequest request, ICustomerService customerService) =>
         {
-            var customer = new Customer
+            var result = await customerService.CreateCustomerAsync(request);
+
+            return result.ErrorType switch
             {
-                FullName = request.FullName.Trim(),
-                Email = request.Email.Trim().ToLower()
+                ServiceErrorType.None when result.Value is not null => Results.Created($"/api/customers/{result.Value.Id}", result.Value),
+                ServiceErrorType.Conflict => Results.Conflict(result.ErrorMessage),
+                ServiceErrorType.Validation => Results.BadRequest(result.ErrorMessage),
+                ServiceErrorType.NotFound => Results.NotFound(result.ErrorMessage),
+                _ => Results.BadRequest(result.ErrorMessage)
             };
-
-            dbContext.Customers.Add(customer);
-            await dbContext.SaveChangesAsync();
-
-            return Results.Created($"/api/customers/{customer.Id}", customer);
         });
 
         return app;
