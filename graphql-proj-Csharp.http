@@ -1,0 +1,66 @@
+@graphql_proj_Csharp_HostAddress = http://localhost:5000
+
+GET {{graphql_proj_Csharp_HostAddress}}/api/health
+Accept: application/json
+
+###
+
+GET {{graphql_proj_Csharp_HostAddress}}/api/info
+Accept: application/json
+
+###
+
+GET {{graphql_proj_Csharp_HostAddress}}/api/books?page=1&pageSize=10
+Accept: application/json
+
+###
+
+POST {{graphql_proj_Csharp_HostAddress}}/graphql
+Content-Type: application/json
+
+{
+  "query": "{ books(first: 10) { totalCount pageInfo { hasNextPage endCursor } nodes { id title price stock author { name } publisher { name } } } }"
+}
+
+###
+
+POST {{graphql_proj_Csharp_HostAddress}}/graphql
+Content-Type: application/json
+
+{
+  "query": "mutation { updateBookStock(input: { bookId: 1, stock: 30 }) { id title stock } }"
+}
+
+###
+
+GET {{graphql_proj_Csharp_HostAddress}}/api/controllers/info
+Accept: application/json
+
+###
+
+GET {{graphql_proj_Csharp_HostAddress}}/api/controllers/books?page=1&pageSize=10
+Accept: application/json
+
+###
+
+GET {{graphql_proj_Csharp_HostAddress}}/api/controllers/books/search?term=earth&page=1&pageSize=10
+Accept: application/json
+
+###
+
+PATCH {{graphql_proj_Csharp_HostAddress}}/api/controllers/books/1/stock
+Content-Type: application/json
+
+{
+  "stock": 25
+}
+
+###
+
+POST {{graphql_proj_Csharp_HostAddress}}/api/controllers/customers
+Content-Type: application/json
+
+{
+  "fullName": "New Customer",
+  "email": "new.customer@example.com"
+}
