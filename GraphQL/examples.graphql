@@ -1,0 +1,398 @@
+# Open http://localhost:5000/graphql and paste any operation below.
+# For paged queries, use the `endCursor` from `pageInfo` as the next `after` variable.
+
+query BooksPage($first: Int = 10, $after: String) {
+  books(first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+    }
+    nodes {
+      id
+      title
+      isbn
+      description
+      price
+      stock
+      publishedOn
+      author {
+        id
+        name
+      }
+      publisher {
+        id
+        name
+        country
+      }
+      reviews {
+        id
+        rating
+        comment
+        createdAtUtc
+      }
+    }
+  }
+}
+
+query BookById($id: Int!) {
+  bookById(id: $id) {
+    id
+    title
+    isbn
+    description
+    price
+    stock
+    publishedOn
+    author {
+      id
+      name
+      bio
+    }
+    publisher {
+      id
+      name
+      country
+    }
+    bookCategories {
+      category {
+        id
+        name
+      }
+    }
+    reviews {
+      id
+      rating
+      comment
+      customer {
+        id
+        fullName
+      }
+    }
+  }
+}
+
+query SearchBooks($term: String!, $first: Int = 10, $after: String) {
+  searchBooks(term: $term, first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      title
+      isbn
+      price
+      author {
+        name
+      }
+    }
+  }
+}
+
+query BooksByCategory($categoryName: String!, $first: Int = 10, $after: String) {
+  booksByCategory(categoryName: $categoryName, first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      title
+      price
+      stock
+    }
+  }
+}
+
+query AuthorsPage($first: Int = 10, $after: String) {
+  authors(first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      name
+      bio
+      dateOfBirth
+      books {
+        id
+        title
+      }
+    }
+  }
+}
+
+query AuthorById($id: Int!) {
+  authorById(id: $id) {
+    id
+    name
+    bio
+    dateOfBirth
+    books {
+      id
+      title
+      price
+    }
+  }
+}
+
+query CategoriesPage($first: Int = 10, $after: String) {
+  categories(first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      name
+      description
+    }
+  }
+}
+
+query PublishersPage($first: Int = 10, $after: String) {
+  publishers(first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      name
+      country
+      books {
+        id
+        title
+      }
+    }
+  }
+}
+
+query CustomersPage($first: Int = 10, $after: String) {
+  customers(first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      fullName
+      email
+      orders {
+        id
+        status
+        orderedAtUtc
+      }
+    }
+  }
+}
+
+query OrdersPage($first: Int = 10, $after: String) {
+  orders(first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      orderedAtUtc
+      status
+      customer {
+        id
+        fullName
+      }
+      items {
+        id
+        quantity
+        unitPrice
+        book {
+          id
+          title
+        }
+      }
+    }
+  }
+}
+
+query TopRatedBooks($take: Int = 5) {
+  topRatedBooks(take: $take) {
+    bookId
+    title
+    averageRating
+    reviewCount
+  }
+}
+
+query StoreStats {
+  storeStats {
+    bookCount
+    authorCount
+    customerCount
+    orderCount
+    inventoryValue
+  }
+}
+
+mutation AddAuthor($input: AddAuthorInput!) {
+  addAuthor(input: $input) {
+    id
+    name
+    bio
+    dateOfBirth
+  }
+}
+
+mutation AddCategory($input: AddCategoryInput!) {
+  addCategory(input: $input) {
+    id
+    name
+    description
+  }
+}
+
+mutation AddBook($input: AddBookInput!) {
+  addBook(input: $input) {
+    id
+    title
+    isbn
+    description
+    price
+    stock
+    publishedOn
+    author {
+      id
+      name
+    }
+    publisher {
+      id
+      name
+    }
+    bookCategories {
+      category {
+        id
+        name
+      }
+    }
+  }
+}
+
+mutation UpdateBookStock($input: UpdateBookStockInput!) {
+  updateBookStock(input: $input) {
+    id
+    title
+    stock
+  }
+}
+
+mutation AddReview($input: AddReviewInput!) {
+  addReview(input: $input) {
+    id
+    rating
+    comment
+    createdAtUtc
+    book {
+      id
+      title
+    }
+    customer {
+      id
+      fullName
+    }
+  }
+}
+
+mutation PlaceOrder($input: PlaceOrderInput!) {
+  placeOrder(input: $input) {
+    id
+    orderedAtUtc
+    status
+    customer {
+      id
+      fullName
+    }
+    items {
+      id
+      quantity
+      unitPrice
+      book {
+        id
+        title
+        stock
+      }
+    }
+  }
+}
+
+# Variables examples:
+#
+# AddAuthor:
+# {
+#   "input": {
+#     "name": "Mary Shelley",
+#     "bio": "Author of Frankenstein.",
+#     "dateOfBirth": "1797-08-30"
+#   }
+# }
+#
+# AddCategory:
+# {
+#   "input": {
+#     "name": "Horror",
+#     "description": "Dark, uncanny, and suspenseful fiction."
+#   }
+# }
+#
+# AddBook:
+# {
+#   "input": {
+#     "title": "Frankenstein",
+#     "isbn": "9780141439471",
+#     "description": "A foundational gothic science fiction novel.",
+#     "price": 12.99,
+#     "stock": 20,
+#     "publishedOn": "1818-01-01",
+#     "authorId": 1,
+#     "publisherId": 1,
+#     "categoryIds": [1, 3]
+#   }
+# }
+#
+# UpdateBookStock:
+# {
+#   "input": {
+#     "bookId": 1,
+#     "stock": 30
+#   }
+# }
+#
+# AddReview:
+# {
+#   "input": {
+#     "bookId": 1,
+#     "customerId": 1,
+#     "rating": 5,
+#     "comment": "Excellent read."
+#   }
+# }
+#
+# PlaceOrder:
+# {
+#   "input": {
+#     "customerId": 1,
+#     "items": [
+#       { "bookId": 1, "quantity": 1 },
+#       { "bookId": 3, "quantity": 2 }
+#     ]
+#   }
+# }
