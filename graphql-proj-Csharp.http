@@ -87,6 +87,54 @@ Content-Type: application/json
 
 ###
 
+POST {{graphql_proj_Csharp_HostAddress}}/graphql
+Content-Type: application/json
+
+{
+  "query": "query SearchBooks($term: String!, $first: Int!) { searchBooks(term: $term, first: $first) { totalCount nodes { id title isbn author { name } } } }",
+  "variables": {
+    "term": "earth",
+    "first": 5
+  }
+}
+
+###
+
+POST {{graphql_proj_Csharp_HostAddress}}/graphql
+Content-Type: application/json
+
+{
+  "query": "mutation AddReview($input: AddReviewInput!) { addReview(input: $input) { id rating comment createdAtUtc } }",
+  "variables": {
+    "input": {
+      "bookId": 1,
+      "customerId": 1,
+      "rating": 5,
+      "comment": "Excellent read."
+    }
+  }
+}
+
+###
+
+POST {{graphql_proj_Csharp_HostAddress}}/graphql
+Content-Type: application/json
+
+{
+  "query": "mutation PlaceOrder($input: PlaceOrderInput!) { placeOrder(input: $input) { id status items { quantity unitPrice book { title } } } }",
+  "variables": {
+    "input": {
+      "customerId": 1,
+      "items": [
+        { "bookId": 1, "quantity": 1 },
+        { "bookId": 3, "quantity": 2 }
+      ]
+    }
+  }
+}
+
+###
+
 GET {{graphql_proj_Csharp_HostAddress}}/api/controllers/info
 Accept: application/json
 

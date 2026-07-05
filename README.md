@@ -157,6 +157,12 @@ The refresh endpoint rotates refresh tokens: the old token is revoked and replac
 
 ## Example queries
 
+Full read and mutation examples are available in:
+
+```text
+GraphQL/examples.graphql
+```
+
 ```graphql
 query Books {
   books(first: 10) {
